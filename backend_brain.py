@@ -9,7 +9,7 @@ from threading import Thread
 app = FastAPI()
 
 # --- CONFIGURATION ---
-FRIEND_LAPTOP_URL = "http://192.168.1.10:5000/detections"  # Change this IP!
+FRIEND_LAPTOP_URL = "http://192.168.1.10:5000/detections"
 MATRIX_FILE = "matrix.npy"
 SLOTS_CONFIG_FILE = "slots.json"
 # ---------------------

@@ -5,13 +5,24 @@ import json
 import time
 from fastapi import FastAPI
 from threading import Thread
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app = FastAPI()
 
 # --- CONFIGURATION ---
-FRIEND_LAPTOP_URL = "http://192.168.1.10:5000/detections"
+FRIEND_LAPTOP_URL = "http://localhost:5000/detections"
 MATRIX_FILE = "matrix.npy"
-SLOTS_CONFIG_FILE = "slots.json"
+SLOTS_CONFIG_FILE = "./config.json"
 # ---------------------
 
 # Load Configuration ONCE
@@ -49,6 +60,10 @@ def processing_loop():
             # Temporary list to track occupied slots for this frame
             # 0 = Empty, 1 = Occupied (Simplified for MVP)
             # You can change '1' to 'C' or 'B' later
+
+            print(f"DEBUG RAW DATA: {raw_detections}") 
+            print(f"DEBUG TYPE: {type(raw_detections)}")
+
             slot_status = ['0'] * len(master_config['slots'])
 
             # 2. Loop through every detected car
@@ -66,7 +81,13 @@ def processing_loop():
 
                 # 3. Check which slot this point falls into
                 for index, slot in enumerate(master_config['slots']):
-                    if point_in_rect(map_x, map_y, slot['x'], slot['y'], slot['w'], slot['h']):
+                    coords = slot['coordinates'] 
+                    slot_x = coords['x']
+                    slot_y = coords['y']
+                    slot_w = coords['w']
+                    slot_h = coords['h']
+
+                    if point_in_rect(map_x, map_y, slot_x, slot_y, slot_w, slot_h):
                         # We found a match!
                         # Mark this slot index as Occupied
                         slot_status[index] = '1' 

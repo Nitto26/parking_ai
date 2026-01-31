@@ -1,7 +1,7 @@
 {
     "lot_id": "st_thomas_main",
     "lot_name": "St. Thomas College Main Ground",
-    "map_image_url": "assets/st_thomas_top_down.png",
+    "map_image_url": "./st_thomas_top_down.png",
     "image_dimensions": {
         "width": 1152,
         "height": 896

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoPark AI - Live Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 { margin-bottom: 10px; }
+        .status-bar { margin-bottom: 20px; font-size: 1.2rem; }
+        
+        /* The container that holds the map and the boxes */
+        #map-container {
+            position: relative; /* Crucial for absolute positioning of slots */
+            border: 2px solid #444;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            /* Dimensions will be set by JS based on the image */
+        }
+
+        /* The background map image */
+        #map-image {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        /* The Parking Slot Box */
+        .slot {
+            position: absolute;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            background-color: rgba(0, 255, 0, 0.4); /* Default Green */
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 12px;
+            text-shadow: 1px 1px 2px black;
+            cursor: pointer;
+        }
+
+        /* Status Colors */
+        .slot.occupied {
+            background-color: rgba(255, 0, 0, 0.6) !important;
+            border-color: #ffcccc;
+        }
+        
+        .slot.bike { border-radius: 50%; } /* Visual distinction for bikes */
+
+        /* Legend */
+        .legend {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+        }
+        .dot { height: 15px; width: 15px; display: inline-block; margin-right: 5px; }
+        .green { background-color: rgba(0, 255, 0, 0.6); }
+        .red { background-color: rgba(255, 0, 0, 0.6); }
+
+    </style>
+</head>
+<body>
+
+    <h1>GeoPark AI Dashboard</h1>
+    <div class="status-bar" id="connection-status">Connecting to Backend...</div>
+
+    <div id="map-container">
+        <img id="map-image" alt="Parking Lot Map">
+    </div>
+
+    <div class="legend">
+        <div><span class="dot green"></span>Available</div>
+        <div><span class="dot red"></span>Occupied</div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const BACKEND_URL = "http://localhost:8000"; // Change if backend is on another laptop
+        // ---------------------
+
+        const mapContainer = document.getElementById('map-container');
+        const mapImage = document.getElementById('map-image');
+        const statusText = document.getElementById('connection-status');
+        
+        // Store slot DOM elements to update them quickly later
+        // Format: { "0": divElement, "1": divElement }
+        const slotElements = {}; 
+
+        // 1. INITIALIZATION: Fetch the Map Config
+        async function initMap() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/config`);
+                const config = await response.json();
+
+                console.log("Config loaded:", config);
+
+                // Set Image
+                // Note: Ensure the image path is correct relative to this HTML file
+                mapImage.src = config.map_image_url || "./st_thomas_top_down.png";
+                
+                // Set Container Size (optional, but good for stability)
+                mapContainer.style.width = `${config.image_dimensions.width}px`;
+                mapContainer.style.height = `${config.image_dimensions.height}px`;
+
+                // Draw Slots
+                config.slots.forEach(slot => {
+                    const div = document.createElement('div');
+                    div.className = 'slot';
+                    div.innerText = slot.label || slot.id;
+                    
+                    // Specific Styling for Bikes vs Cars (The "Spice")
+                    if (slot.type === 'bike') div.classList.add('bike');
+
+                    // Position exactly where the JSON says
+                    div.style.left = `${slot.coordinates.x}px`;
+                    div.style.top = `${slot.coordinates.y}px`;
+                    div.style.width = `${slot.coordinates.w}px`;
+                    div.style.height = `${slot.coordinates.h}px`;
+
+                    mapContainer.appendChild(div);
+                    
+                    // Store reference for live updates
+                    slotElements[slot.id] = div;
+                });
+
+                statusText.innerText = `Connected to: ${config.lot_name}`;
+                statusText.style.color = "#4caf50";
+
+                // Start Polling Loop
+                setInterval(updateStatus, 1000); // Check every 1 second
+
+            } catch (error) {
+                console.error("Init Error:", error);
+                statusText.innerText = "Error: Could not load config. Is Backend running?";
+                statusText.style.color = "red";
+            }
+        }
+
+        // 2. LIVE LOOP: Fetch Status String
+        async function updateStatus() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/status`);
+                const data = await response.json();
+                
+                // data.status_string looks like "01100"
+                const statusString = data.status_string;
+
+                // Loop through every character in the string
+                for (let i = 0; i < statusString.length; i++) {
+                    const char = statusString[i];
+                    const slotDiv = slotElements[i];
+
+                    if (slotDiv) {
+                        if (char === '1' || char === 'C' || char === 'S' || char === 'B') {
+                            slotDiv.classList.add('occupied');
+                        } else {
+                            slotDiv.classList.remove('occupied');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn("Polling Error:", error);
+            }
+        }
+
+        // Start the engine
+        window.onload = initMap;
+
+    </script>
+</body>
+</html>

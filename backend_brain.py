@@ -17,9 +17,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app = FastAPI()
-
 # --- CONFIGURATION ---
+#https://mugwumpian-scottie-homely.ngrok-free.dev/get-coords
 FRIEND_LAPTOP_URL = "http://localhost:5000/detections"
 MATRIX_FILE = "matrix.npy"
 SLOTS_CONFIG_FILE = "./config.json"
